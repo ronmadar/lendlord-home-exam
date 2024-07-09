@@ -9,10 +9,22 @@ require('dotenv').config({ path: `./.env.${APP_ENV}` })
 const Koa = require('koa')
 const koaCors = require('@koa/cors')
 const { koaBody } = require('koa-body')
+const bodyParser = require('koa-bodyparser');
+const mongoose = require('mongoose');
+const KoaRouter = require('koa-router');
+const json = require('koa-json')
 
+const router = require('./routes/routes');
 const model = require('./models')
 model.init()
 const server = new Koa()
+
+// Middleware
+server.use(bodyParser());
+server.use(koaCors()); 
+server.use(json()); 
+
+server.use(router.routes()).use(router.allowedMethods());
 
 if (runMode === 'app') {
 
@@ -39,6 +51,18 @@ if (runMode === 'app') {
   )
 
   require('./routes')(server)
+
+  // Connect to MongoDB
+  mongoose.connect('mongodb://localhost:27017/users', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  const db = mongoose.connection;
+  db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+  db.once('open', () => {
+    console.log('Connected to MongoDB');
+  });
+
 }
 
 const port = config.ports[runMode]
